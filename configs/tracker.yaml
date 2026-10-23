@@ -1,0 +1,7 @@
+# Tracker configuration (Phase 2 integrates ByteTrack; BoT-SORT as comparison).
+algorithm: bytetrack
+track_high_thresh: 0.5
+track_low_thresh: 0.1
+match_thresh: 0.8
+max_time_lost: 30
+min_track_duration: 5

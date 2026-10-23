@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Data, weights, and artifacts (never committed; see docs/DATA.md)
+data/
+weights/
+*.pt
+*.onnx
+*.engine
+*.mp4
+*.avi
+*.mov
+results/*
+!results/.gitkeep
+
+# Secrets and local config
+.env
+.env.*
+*.pem
+*.key
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

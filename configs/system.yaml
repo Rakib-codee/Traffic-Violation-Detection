@@ -1,0 +1,6 @@
+# Top-level run configuration. Seeds are fixed and logged per run.
+seed: 42
+log_level: INFO
+data_dir: data
+results_dir: results
+sample_video: data/samples/synthetic_intersection.mp4

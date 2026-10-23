@@ -1,0 +1,12 @@
+# Detector configuration (Phase 1 fills in training/eval).
+architecture: yolov8
+weights: weights/detector.pt
+conf_threshold: 0.25
+iou_threshold: 0.45
+input_size: 640
+classes:
+  - car
+  - bus
+  - truck
+  - motorcycle
+  - person

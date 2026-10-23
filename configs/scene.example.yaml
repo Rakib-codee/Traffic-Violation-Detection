@@ -1,0 +1,24 @@
+# Example per-camera scene calibration. Copy to scene.<camera_id>.yaml and
+# annotate real geometry with the scene tool (Phase 3).
+camera_id: example-intersection-north
+stop_line:
+  - {x: 320, y: 400}
+  - {x: 320, y: 600}
+lanes:
+  - name: northbound
+    polygon:
+      - {x: 340, y: 400}
+      - {x: 480, y: 400}
+      - {x: 480, y: 720}
+      - {x: 340, y: 720}
+    direction: {x: 0, y: 1}
+  - name: southbound
+    polygon:
+      - {x: 160, y: 400}
+      - {x: 300, y: 400}
+      - {x: 300, y: 720}
+      - {x: 160, y: 720}
+    direction: {x: 0, y: -1}
+signal_roi: {x: 300, y: 120, width: 40, height: 90}
+red_light_tolerance_s: 0.3
+wrong_way_min_frames: 10

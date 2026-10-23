@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tvd.detect.data import validate_dataset, validate_label_file
+from tvd.detect.data import repair_downloaded_yaml, validate_dataset, validate_label_file
 
 
 def _make_dataset(root: Path, labels: dict[str, str]) -> Path:
@@ -80,3 +80,36 @@ def test_missing_yaml_key(tmp_path):
     bad.write_text(yaml.safe_dump({"path": str(tmp_path), "train": "images/train"}))
     with pytest.raises(ValueError, match="missing required key"):
         validate_dataset(bad)
+
+
+def test_repair_downloaded_yaml(tmp_path):
+    """Roboflow-style export: per-split dirs and broken relative paths."""
+    (tmp_path / "train" / "images").mkdir(parents=True)
+    (tmp_path / "train" / "labels").mkdir(parents=True)
+    (tmp_path / "valid" / "images").mkdir(parents=True)
+    (tmp_path / "valid" / "labels").mkdir(parents=True)
+    (tmp_path / "train" / "images" / "a.jpg").write_bytes(b"fake")
+    (tmp_path / "valid" / "images" / "b.jpg").write_bytes(b"fake")
+    (tmp_path / "train" / "labels" / "a.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+    (tmp_path / "valid" / "labels" / "b.txt").write_text("0 0.5 0.5 0.2 0.2\n")
+    broken = tmp_path / "data.yaml"
+    broken.write_text(
+        yaml.safe_dump(
+            {
+                "train": "../train/images",
+                "val": "../valid/images",
+                "test": "../test/images",
+                "names": ["car"],
+                "nc": 1,
+            }
+        )
+    )
+
+    repaired = repair_downloaded_yaml(tmp_path)
+    info = validate_dataset(repaired)
+    assert info.n_train == 1 and info.n_val == 1
+    data = yaml.safe_load(repaired.read_text())
+    assert data["path"] == str(tmp_path.resolve())
+    assert data["train"] == "train/images"
+    assert data["val"] == "valid/images"
+    assert "test" not in data

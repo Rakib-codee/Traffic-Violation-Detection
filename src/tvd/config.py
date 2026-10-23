@@ -34,6 +34,22 @@ class DetectorConfig(BaseModel):
     classes: list[str] = Field(default=["car", "bus", "truck", "motorcycle", "person"])
 
 
+class TrainConfig(BaseModel):
+    """Detector training hyperparameters (configs/train.yaml)."""
+
+    dataset_yaml: Path = Path("data/vehicles/data.yaml")
+    base_weights: Path = Path("yolov8n.pt")
+    epochs: int = Field(default=50, gt=0)
+    batch_size: int = Field(default=16, gt=0)
+    input_size: int = Field(default=640, gt=0)
+    optimizer: Literal["auto", "SGD", "Adam", "AdamW"] = "auto"
+    learning_rate: float = Field(default=0.01, gt=0.0)
+    device: str = Field(
+        default="auto", description="'auto', 'mps', 'cuda', 'cpu', or device index."
+    )
+    run_name: str = "detector"
+
+
 class TrackerConfig(BaseModel):
     """Multi-object tracker configuration (configs/tracker.yaml)."""
 
@@ -128,6 +144,10 @@ def load_detector_config(path: Path | str) -> DetectorConfig:
 
 def load_tracker_config(path: Path | str) -> TrackerConfig:
     return TrackerConfig(**load_yaml(path))
+
+
+def load_train_config(path: Path | str) -> TrainConfig:
+    return TrainConfig(**load_yaml(path))
 
 
 def load_scene_config(path: Path | str) -> SceneConfig:

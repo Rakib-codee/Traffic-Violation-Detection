@@ -14,6 +14,7 @@ venv/
 # Data, weights, and artifacts (never committed; see docs/DATA.md)
 data/
 weights/
+runs/
 *.pt
 *.onnx
 *.engine

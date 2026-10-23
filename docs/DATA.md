@@ -5,6 +5,7 @@ Record every dataset used below before downloading it.
 
 | Dataset | Purpose | License | Source | Status |
 |---|---|---|---|---|
+| coco8 | pipeline smoke tests only (8 COCO images) | COCO terms (images: Flickr terms; annotations CC BY 4.0) | https://github.com/ultralytics/assets/releases | downloaded to data/coco8 |
 | UA-DETRAC | vehicle detection/tracking | research use; verify on site | https://detrac-db.rit.albany.edu/ | not downloaded |
 | BDD100K | driving scenes | BSD-style; verify terms | https://bdd-data.berkeley.edu/ | not downloaded |
 | AI City Challenge | traffic analytics | per-track terms; verify | https://www.aicitychallenge.org/ | not downloaded |

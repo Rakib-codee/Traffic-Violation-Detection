@@ -13,6 +13,9 @@ dependencies = [
     "opencv-python-headless==5.0.0.93",
     "pydantic==2.14.1",
     "PyYAML==6.0.3",
+    "torch==2.14.1",
+    "torchvision==0.29.1",
+    "ultralytics==8.4.184",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,11 @@
+# Detector training hyperparameters. dataset_yaml points into the gitignored
+# data/ dir; see docs/DATA.md for sources and licenses.
+dataset_yaml: data/vehicles/data.yaml
+base_weights: yolov8n.pt
+epochs: 50
+batch_size: 16
+input_size: 640
+optimizer: auto
+learning_rate: 0.01
+device: auto
+run_name: detector

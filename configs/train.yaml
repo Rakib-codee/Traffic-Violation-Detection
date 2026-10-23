@@ -2,7 +2,7 @@
 # data/ dir; see docs/DATA.md for sources and licenses.
 dataset_yaml: data/vehicles/data.yaml
 base_weights: yolov8n.pt
-epochs: 50
+epochs: 20
 batch_size: 16
 input_size: 640
 optimizer: auto

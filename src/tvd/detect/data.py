@@ -65,6 +65,42 @@ def _count_images(images_dir: Path) -> int:
     return sum(1 for p in images_dir.iterdir() if p.suffix.lower() in exts)
 
 
+def repair_downloaded_yaml(location: Path) -> Path:
+    """Fix a freshly exported Roboflow data.yaml in-place.
+
+    Roboflow exports sometimes carry relative paths that escape the export dir
+    (e.g. train: ../train/images). Rewrite path/train/val to what is actually
+    on disk so validate_dataset and ultralytics both resolve them.
+    """
+    location = Path(location).resolve()
+    dataset_yaml = location / "data.yaml"
+    data = yaml.safe_load(dataset_yaml.read_text())
+    if not isinstance(data, dict) or "names" not in data:
+        raise ValueError(f"{dataset_yaml}: not a usable dataset yaml (missing 'names')")
+
+    def find_split_images(split: str) -> str | None:
+        candidates = [f"{split}/images", f"images/{split}"]
+        if split == "val":
+            candidates.append("valid/images")
+        for candidate in candidates:
+            if (location / candidate).is_dir():
+                return candidate
+        return None
+
+    train_dir = find_split_images("train")
+    val_dir = find_split_images("val")
+    if train_dir is None or val_dir is None:
+        raise ValueError(f"{dataset_yaml}: could not locate train/val image dirs under {location}")
+
+    data["path"] = str(location)
+    data["train"] = train_dir
+    data["val"] = val_dir
+    data.pop("test", None)  # exports reference test dirs that are not shipped
+    dataset_yaml.write_text(yaml.safe_dump(data, sort_keys=False))
+    logger.info("repaired %s (train=%s val=%s)", dataset_yaml, train_dir, val_dir)
+    return dataset_yaml
+
+
 def validate_dataset(dataset_yaml: Path) -> DatasetInfo:
     """Validate a YOLO dataset end to end; raises on the first problem found."""
     dataset_yaml = Path(dataset_yaml)
@@ -76,9 +112,13 @@ def validate_dataset(dataset_yaml: Path) -> DatasetInfo:
 
     counts: dict[str, int] = {}
     for split in ("train", "val"):
-        default_dir = root / "images" / split
-        images_dir = default_dir if default_dir.exists() else root / data[split]
+        images_dir = root / "images" / split
+        if not images_dir.is_dir():
+            images_dir = root / data[split]
+        # two common layouts: <root>/labels/<split> or <root>/<split>/labels
         labels_dir = root / "labels" / split
+        if not labels_dir.is_dir():
+            labels_dir = root / data[split].split("/images")[0] / "labels"
         if not images_dir.is_dir():
             raise ValueError(
                 f"{dataset_yaml}: missing images dir for split '{split}': {images_dir}"

@@ -1,0 +1,11 @@
+# Smoke-run config: tiny dataset + 1 epoch to prove the train/eval pipeline.
+# Not a meaningful model; real runs use configs/train.yaml.
+dataset_yaml: data/coco8/data.yaml
+base_weights: yolov8n.pt
+epochs: 1
+batch_size: 4
+input_size: 640
+optimizer: auto
+learning_rate: 0.01
+device: auto
+run_name: smoke

@@ -24,6 +24,19 @@ make lint         # ruff check + format check
 make run          # generate a synthetic sample video into data/samples/
 ```
 
+## Detection (Phase 1)
+
+```bash
+# put a YOLO-format dataset in data/ (see docs/DATA.md), then:
+python scripts/train_detector.py --train-config configs/train.yaml
+python scripts/eval_detector.py --weights weights/detector.pt
+# pipeline smoke test (tiny coco8 sample, 1 epoch):
+python scripts/train_detector.py --train-config configs/train.smoke.yaml
+```
+
+The eval script regenerates `docs/RESULTS.md` (committed) and
+`results/detection/<run>/metrics.json` (gitignored).
+
 ## Repository layout
 
 ```

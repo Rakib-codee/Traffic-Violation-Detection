@@ -37,6 +37,23 @@ python scripts/train_detector.py --train-config configs/train.smoke.yaml
 The eval script regenerates `docs/RESULTS.md` (committed) and
 `results/detection/<run>/metrics.json` (gitignored).
 
+## Tracking (Phase 2)
+
+```bash
+# track a video: writes MOT tracks, trajectories CSV, annotated mp4, summary
+python scripts/run_video.py --video <clip.mp4> --weights weights/detector.pt
+
+# tracking metrics (HOTA/IDF1/ID switches/MOTA) against MOT ground truth:
+# 1) obtain UA-DETRAC video + annotation XMLs (request form, see docs/DATA.md)
+# 2) python scripts/convert_detrac_to_mot.py --annotations-dir <xml dir> \
+#      --videos-dir <avi dir> --out-dir data/detrac_mot
+# 3) python scripts/eval_tracking.py --video <avi dir>/<seq>.avi \
+#      --weights weights/detector.pt --gt-folder data/detrac_mot
+```
+
+Note: trackeval 1.3.0 only allows the 'pedestrian' class slot for custom MOT
+benchmarks; vehicle GT is mapped to that slot (class id 1).
+
 ## Repository layout
 
 ```

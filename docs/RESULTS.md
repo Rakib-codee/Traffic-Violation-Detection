@@ -4,19 +4,17 @@ Regenerated from real runs; do not edit by hand.
 
 # Detector mAP
 
-run: `smoke`
+run: `detector`
 weights: `weights/detector.pt`
-dataset: `data/coco8/data.yaml`
+dataset: `data/vehicles/data.yaml`
 seed: 42
 device: mps
-val images: 4
+val images: 500
 
 | class | mAP@0.5 | mAP@0.5:0.95 |
 |---|---|---|
-| person | 0.5305 | 0.2627 |
-| dog | 0.4975 | 0.4747 |
-| horse | 0.9950 | 0.4747 |
-| elephant | 0.7450 | 0.4747 |
-| umbrella | 0.9950 | 0.4747 |
-| potted plant | 0.4975 | 0.4747 |
-| **all** | **0.7101** | **0.4747** |
+| bus | 0.9725 | 0.8110 |
+| car | 0.9839 | 0.8270 |
+| truck | 0.9330 | 0.8222 |
+| van | 0.9917 | 0.9027 |
+| **all** | **0.9702** | **0.8407** |

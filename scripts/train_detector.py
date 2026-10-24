@@ -69,7 +69,7 @@ def train(
     best = Path(results.save_dir) / "weights" / "best.pt"
     if not best.exists():
         raise RuntimeError(f"training finished but best weights not found at {best}")
-    dest = Path("weights/detector.pt")
+    dest = Path(f"weights/{cfg.run_name}.pt")
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(best, dest)
     logger.info("best weights copied to %s", dest)

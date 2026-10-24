@@ -50,6 +50,33 @@ class TrainConfig(BaseModel):
     run_name: str = "detector"
 
 
+class HelmetConfig(BaseModel):
+    """Helmet non-use rule (configs/extensions.yaml section)."""
+
+    enabled: bool = False
+    weights: Path = Path("weights/helmet.pt")
+    conf_threshold: float = Field(default=0.25, gt=0.0, lt=1.0)
+    min_frames: int = Field(default=5, gt=0, description="Consecutive no-helmet frames to flag.")
+    no_helmet_labels: list[str] = Field(default=["without helmet", "no_helmet", "no-helmet"])
+
+
+class AnprConfig(BaseModel):
+    """Plate recognition (ANPR) — off by default; privacy-sensitive."""
+
+    enabled: bool = False
+    weights: Path = Path("weights/plate.pt")
+    conf_threshold: float = Field(default=0.25, gt=0.0, lt=1.0)
+    store_plate_text: bool = Field(
+        default=False, description="Store OCR text in metadata; requires explicit opt-in."
+    )
+    ocr_languages: list[str] = Field(default=["en"])
+
+
+class ExtensionsConfig(BaseModel):
+    helmet: HelmetConfig = HelmetConfig()
+    anpr: AnprConfig = AnprConfig()
+
+
 class TrackerConfig(BaseModel):
     """Multi-object tracker configuration (configs/tracker.yaml)."""
 
@@ -156,3 +183,7 @@ def load_train_config(path: Path | str) -> TrainConfig:
 
 def load_scene_config(path: Path | str) -> SceneConfig:
     return SceneConfig(**load_yaml(path))
+
+
+def load_extensions_config(path: Path | str) -> ExtensionsConfig:
+    return ExtensionsConfig(**load_yaml(path))

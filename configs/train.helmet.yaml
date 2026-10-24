@@ -1,0 +1,10 @@
+# Helmet model training: helmet-detection_yolov8 v3 (CC BY 4.0).
+dataset_yaml: data/helmet/data.yaml
+base_weights: yolov8n.pt
+epochs: 20
+batch_size: 16
+input_size: 640
+optimizer: auto
+learning_rate: 0.01
+device: auto
+run_name: helmet

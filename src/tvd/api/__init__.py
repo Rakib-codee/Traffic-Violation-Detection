@@ -1,1 +1,1 @@
-"""api module (placeholder; implemented in a later phase)."""
+"""API package (FastAPI review backend)."""

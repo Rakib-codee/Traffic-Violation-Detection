@@ -54,6 +54,20 @@ python scripts/run_video.py --video <clip.mp4> --weights weights/detector.pt
 Note: trackeval 1.3.0 only allows the 'pedestrian' class slot for custom MOT
 benchmarks; vehicle GT is mapped to that slot (class id 1).
 
+## Scene calibration + signal state (Phase 3)
+
+```bash
+# interactively annotate a camera view (stop line, lanes+directions, signal ROI)
+python scripts/annotate_scene.py --camera-id cam-01 \
+    --video <clip.mp4> --out configs/scene.cam-01.yaml
+
+# signal state from an ROI (heuristic baseline with majority-vote smoothing)
+python -c "from tvd.signal import classify_roi, SignalState; ..."
+```
+
+Committed scene configs (`configs/scene.*.yaml`) are covered by
+`tests/test_scene_configs.py`: every view must validate (Phase 3 exit).
+
 ## Repository layout
 
 ```

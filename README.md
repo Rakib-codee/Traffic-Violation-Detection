@@ -80,6 +80,24 @@ python scripts/eval_rules.py   # event-level P/R/F1 + false alerts/hour
 The scenario suite is synthetic; the hand-labeled real-video event set is
 not run yet (see docs/DATA.md). All outputs are candidates for human review.
 
+## Evidence + dashboard (Phase 5)
+
+```bash
+# end-to-end: video -> detect -> track -> signal -> rules -> evidence -> SQLite
+python scripts/run_pipeline.py --video <clip.mp4> --scene configs/scene.<cam>.yaml \
+    --weights weights/detector.pt
+
+# review API (serves events + blurred evidence clips)
+uvicorn tvd.api.main:app --port 8000
+
+# review dashboard
+streamlit run src/tvd/ui/dashboard.py -- --db results/events.db
+```
+
+Plates/faces are blurred in stored evidence by default (plate band is a
+heuristic until Phase 6 ANPR). Cameras with no visible signal set
+`signal_roi: null`, which disables the red-light rule for that view.
+
 ## Repository layout
 
 ```

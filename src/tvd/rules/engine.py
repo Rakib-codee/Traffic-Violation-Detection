@@ -106,6 +106,9 @@ class RuleEngine:
         if not crosses_stop_line(prev, curr, self.scene):
             return None
 
+        # cameras without a visible signal cannot run red-light detection
+        if self.scene.signal_roi is None:
+            return None
         signal = self.signal_at(frame_idx)
         if signal is not SignalState.RED:
             return None

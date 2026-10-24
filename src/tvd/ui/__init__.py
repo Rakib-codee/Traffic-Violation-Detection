@@ -1,1 +1,1 @@
-"""ui module (placeholder; implemented in a later phase)."""
+"""Streamlit review dashboard (src/tvd/ui/dashboard.py)."""

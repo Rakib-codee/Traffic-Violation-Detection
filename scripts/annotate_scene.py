@@ -82,8 +82,6 @@ class AnnotationCollector:
             raise ValueError("stop line needs exactly 2 points")
         if not self.lanes:
             raise ValueError("at least one lane is required")
-        if self.signal_roi is None:
-            raise ValueError("signal ROI is required")
 
         lanes: list[Lane] = []
         for ann in self.lanes:
@@ -101,12 +99,15 @@ class AnnotationCollector:
                 )
             )
 
-        x, y, w, h = self.signal_roi
+        signal_roi = None
+        if self.signal_roi is not None:
+            x, y, w, h = self.signal_roi
+            signal_roi = SignalRoi(x=x, y=y, width=w, height=h)
         return SceneConfig(
             camera_id=camera_id,
             stop_line=[Point(x=px, y=py) for px, py in self.stop_line],
             lanes=lanes,
-            signal_roi=SignalRoi(x=x, y=y, width=w, height=h),
+            signal_roi=signal_roi,
         )
 
 

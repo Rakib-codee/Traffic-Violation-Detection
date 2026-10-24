@@ -108,7 +108,11 @@ class SceneConfig(BaseModel):
     camera_id: str
     stop_line: list[Point] = Field(min_length=2, max_length=2)
     lanes: list[Lane] = Field(min_length=1)
-    signal_roi: SignalRoi
+    signal_roi: SignalRoi | None = Field(
+        default=None,
+        description="Traffic signal region; null for cameras with no visible signal"
+        " (red-light rule is then disabled for that view).",
+    )
     red_light_tolerance_s: float = Field(
         default=0.3, ge=0.0, description="Grace window after signal turns red."
     )

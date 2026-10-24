@@ -2,8 +2,8 @@
 # sequence, distributed via the CC BY 4.0 Roboflow export in data/vehicles).
 # Elevated fixed camera; near carriageway runs toward the camera (+y),
 # far carriageway (right, beyond the fence) runs away (-y).
-# No traffic signal is visible in this view; the signal ROI is a placeholder
-# region at the top of the frame to be refined if a signal is in view.
+# No traffic signal is visible in this view; signal_roi is null, which
+# disables the red-light rule for this camera (wrong-way still applies).
 camera_id: detrac-mvi20012
 stop_line:
   - {x: 262, y: 480}
@@ -30,6 +30,6 @@ lanes:
       - {x: 580, y: 220}
       - {x: 545, y: 260}
     direction: {x: 0, y: -1}
-signal_roi: {x: 295, y: 0, width: 50, height: 40}
+signal_roi: null
 red_light_tolerance_s: 0.3
 wrong_way_min_frames: 10

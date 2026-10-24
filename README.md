@@ -68,6 +68,18 @@ python -c "from tvd.signal import classify_roi, SignalState; ..."
 Committed scene configs (`configs/scene.*.yaml`) are covered by
 `tests/test_scene_configs.py`: every view must validate (Phase 3 exit).
 
+## Rule engine (Phase 4)
+
+Red-light (stop-line crossing while signal red, with tolerance window) and
+wrong-way (sustained opposing motion) rules run on synthetic trajectories:
+
+```bash
+python scripts/eval_rules.py   # event-level P/R/F1 + false alerts/hour
+```
+
+The scenario suite is synthetic; the hand-labeled real-video event set is
+not run yet (see docs/DATA.md). All outputs are candidates for human review.
+
 ## Repository layout
 
 ```

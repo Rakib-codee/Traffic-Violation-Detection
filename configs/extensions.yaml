@@ -1,6 +1,6 @@
 # Phase 6 extension modules; everything is off by default.
 helmet:
-  enabled: false
+  enabled: true
   weights: weights/helmet.pt
   conf_threshold: 0.25
   min_frames: 5

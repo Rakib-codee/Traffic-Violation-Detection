@@ -36,6 +36,11 @@ def load_dataset_yaml(dataset_yaml: Path) -> dict:
     return data
 
 
+# Roboflow exports often clip boxes at image bounds, leaving coords a fraction
+# beyond [0, 1]; ultralytics clips these during training, so warn instead of fail.
+COORD_TOLERANCE = 0.02
+
+
 def validate_label_file(path: Path, n_classes: int) -> int:
     """Check one YOLO label file; returns the number of objects."""
     count = 0
@@ -52,8 +57,10 @@ def validate_label_file(path: Path, n_classes: int) -> int:
                 f"{path}:{lineno}: class id {class_id} out of range 0..{n_classes - 1}"
             )
         coords = [float(v) for v in parts[1:]]
-        if any(not 0.0 <= v <= 1.0 for v in coords):
+        if any(not -COORD_TOLERANCE <= v <= 1.0 + COORD_TOLERANCE for v in coords):
             raise ValueError(f"{path}:{lineno}: coordinates must be normalized to [0, 1]")
+        if any(not 0.0 <= v <= 1.0 for v in coords):
+            logger.warning("%s:%d: box slightly out of bounds, training will clip it", path, lineno)
         if coords[2] <= 0 or coords[3] <= 0:
             raise ValueError(f"{path}:{lineno}: box width/height must be positive")
         count += 1

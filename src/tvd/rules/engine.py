@@ -19,6 +19,7 @@ from tvd.track.tracker import Track
 class ViolationType(Enum):
     RED_LIGHT = "red_light"
     WRONG_WAY = "wrong_way"
+    HELMET = "helmet"
 
 
 @dataclass

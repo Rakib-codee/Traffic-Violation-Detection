@@ -1,0 +1,14 @@
+# Phase 6 extension modules; everything is off by default.
+helmet:
+  enabled: false
+  weights: weights/helmet.pt
+  conf_threshold: 0.25
+  min_frames: 5
+  no_helmet_labels: ["without helmet", "no_helmet", "no-helmet"]
+
+anpr:
+  enabled: false
+  weights: weights/plate.pt
+  conf_threshold: 0.25
+  store_plate_text: false
+  ocr_languages: ["en"]

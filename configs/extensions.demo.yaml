@@ -1,0 +1,8 @@
+# Demo extension config: every Phase 6 module off, so the pipeline runs on a
+# fresh clone without the trained helmet/plate weights (both gitignored).
+# Enable modules via configs/extensions.yaml once the weights are trained.
+helmet:
+  enabled: false
+
+anpr:
+  enabled: false

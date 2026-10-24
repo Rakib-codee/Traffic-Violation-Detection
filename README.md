@@ -24,6 +24,34 @@ make lint         # ruff check + format check
 make run          # generate a synthetic sample video into data/samples/
 ```
 
+## Demo (fresh clone, no trained weights)
+
+`make demo` generates the synthetic sample video, runs the full pipeline with
+the COCO `yolov8n.pt` weights (auto-downloaded) and all extension modules
+disabled (`configs/extensions.demo.yaml`), then runs the rule-engine eval.
+It needs no datasets or trained weights:
+
+```bash
+make demo
+```
+
+To use the trained vehicle/helmet/plate detectors instead, point
+`--weights weights/detector.pt` and `configs/extensions.yaml` (Phase 6).
+
+## Docker
+
+CPU-only image that reproduces the demo (and can run the test suite) with no
+datasets or trained weights:
+
+```bash
+docker build -t tvd .
+docker run --rm tvd                          # synthetic demo + rule eval
+docker run --rm tvd python -m pytest -q      # test suite instead
+```
+
+The image downloads the COCO `yolov8n.pt` weights on first run; outputs land
+under `results/` inside the container.
+
 ## Detection (Phase 1)
 
 ```bash
@@ -94,9 +122,9 @@ uvicorn tvd.api.main:app --port 8000
 streamlit run src/tvd/ui/dashboard.py -- --db results/events.db
 ```
 
-Plates/faces are blurred in stored evidence by default (plate band is a
-heuristic until Phase 6 ANPR). Cameras with no visible signal set
-`signal_roi: null`, which disables the red-light rule for that view.
+Plates/faces are blurred in stored evidence by default (the blur region is a
+heuristic plate band). Cameras with no visible signal set `signal_roi: null`,
+which disables the red-light rule for that view.
 
 ## Repository layout
 

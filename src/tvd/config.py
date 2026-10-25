@@ -90,6 +90,21 @@ class TrackerConfig(BaseModel):
     min_track_duration: int = Field(
         default=5, gt=0, description="Minimum frames for a track to feed the rule engine."
     )
+    stitch_enabled: bool = Field(
+        default=True, description="Stitch tracklets across short gaps (ID switch/occlusion)."
+    )
+    stitch_max_gap_frames: int = Field(
+        default=10,
+        gt=0,
+        description="Maximum gap (frames) a lost tracklet can be re-linked over."
+        " Also used as the rule engine's per-track gap tolerance when enabled.",
+    )
+    stitch_max_dist_px: float = Field(
+        default=80.0,
+        gt=0,
+        description="Maximum distance (px) between a new track and the lost"
+        " tracklet's velocity-predicted position for stitching.",
+    )
 
     @field_validator("track_low_thresh")
     @classmethod

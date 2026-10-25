@@ -29,3 +29,17 @@ clips:
       - {type: wrong_way, start_frame: 57, end_frame: 66, note: "van, near-lane-left"}
       - {type: wrong_way, start_frame: 57, end_frame: 66, note: "car, near-lane-right"}
       - {type: wrong_way, start_frame: 58, end_frame: 67, note: "car, far-lane-away"}
+  - name: detrac-signal-red-light
+    video: data/events/detrac_mvi20012_signal.mp4
+    scene: configs/scene.detrac-mvi20012-signal.yaml
+    expected_events:
+      # synthetic signal: green frames 1-25, red 26-67. Physical ground truth:
+      # the van crosses the stop line at frame ~13 on GREEN (no violation);
+      # the silver car crosses at frame ~32 on RED (one violation).
+      # The pipeline fires 3 events here: the genuine one (~32) plus two
+      # tracker artifacts that this set deliberately reports, not hides:
+      # (a) the van's bounding-box bottom re-crosses the line at ~37 when an
+      # occlusion clears, (b) the same silver car is re-flagged at ~40 after
+      # a tracker ID switch. So this clip scores tp=1 fp=2 and the mismatch
+      # is the honest steady state (see docs/REPORT.md).
+      - {type: red_light, start_frame: 32, end_frame: 32, note: "silver car crosses stop line on red"}

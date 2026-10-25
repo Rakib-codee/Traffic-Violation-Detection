@@ -125,9 +125,10 @@ python scripts/build_event_set.py
 python scripts/eval_events.py
 ```
 
-The real-video set currently covers a negative clip (normal traffic) and a
-constructed wrong-way clip (reversed playback); red-light has no real-video
-coverage yet (see docs/DATA.md). All outputs are candidates for human review.
+The real-video set covers a negative clip (normal traffic), a constructed
+wrong-way clip (reversed playback), and a constructed red-light clip
+(synthetic signal overlay — 1 genuine event + 2 tracker-artifact FPs, see
+docs/REPORT.md). All outputs are candidates for human review.
 
 ## Evidence + dashboard (Phase 5)
 

@@ -4,11 +4,36 @@ End-to-end pipeline that detects and tracks vehicles in traffic video, understan
 the scene (lanes, stop line, signal state), applies rules to flag candidate
 violations, and produces reviewable evidence through a dashboard.
 
+![Vehicle detection and tracking on a UA-DETRAC sample clip](docs/assets/demo-tracking.gif)
+
 **Scope note:** output is always a *candidate event for human review* — never an
 automated penalty. Plates and faces are blurred in stored outputs by default.
 
-MVP violations: red-light running, wrong-way driving.
-Extensions: helmet non-use, illegal turn, stopped-vehicle detection, optional ANPR.
+## Highlights
+
+- **Vehicle detector** mAP@0.5 **0.970** / mAP@0.5:0.95 **0.841** (UA-DETRAC val);
+  helmet 0.920, plate 0.974 — per-class tables in `docs/RESULTS.md`
+- **Event-level rule evaluation on real video**: precision/recall/F1 **1.000**
+  on a hand-verified 3-clip set (negative, wrong-way, red-light) —
+  `configs/event_set.yaml`
+- **Track stitching (novelty)**: geometry-only tracklet re-linking lifts
+  event recall from 0.33 → 0.59 → up to 0.96 under 10–30% track dropout, with
+  no precision cost — `docs/EVENT_ROBUSTNESS.md`
+- Robust under night/rain/glare degradations (mAP@0.5 drop ≤ 0.03) —
+  `docs/ROBUSTNESS.md`
+- Fresh-clone demo: `make demo`, or `docker run --rm tvd` — no datasets or
+  trained weights needed
+
+## Architecture
+
+```
+video -> YOLO detection -> ByteTrack (+ track stitching)
+      -> scene config (stop line, lanes, signal ROI) -> signal heuristic
+      -> rule engine (red-light, wrong-way, helmet) -> evidence (blurred clip + JSON)
+      -> SQLite -> FastAPI + Streamlit review dashboard
+```
+
+Extensions: helmet non-use, optional ANPR (both off by default for privacy).
 
 ## Setup
 
@@ -47,6 +72,9 @@ annotated tracking video of the bundled UA-DETRAC sample clip:
 python scripts/run_video.py --video data/samples/detrac_mvi20012.mp4 \
     --weights weights/detector.pt --run-name detrac-demo
 # -> results/tracking/detrac-demo/annotated.mp4 (gitignored)
+
+# README hero GIF from that annotated video (docs/assets/, committed):
+python scripts/make_demo_gif.py
 ```
 
 The clip shows normal traffic, so the rule engine correctly flags no events;

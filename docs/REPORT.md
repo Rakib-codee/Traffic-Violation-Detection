@@ -56,6 +56,29 @@ used during development; the UA-DETRAC benchmark eval (HOTA/IDF1/ID switches)
 is **not run** — dataset access was requested by the repo owner and is still
 pending (see `docs/DATA.md`).
 
+Track stitching (novelty part): a lightweight online tracklet stitcher
+(`src/tvd/track/stitch.py`, geometry + constant-velocity gating only, no
+re-id model) re-links tracklets across short tracker gaps, and the rule
+engine tolerates gaps up to the same gate. Measured on the event set under
+seeded track dropout (`docs/EVENT_ROBUSTNESS.md`; post-hoc surrogate, harsher
+than real detector loss; means over 3 seeds):
+
+| dropout | recall, stitching off | recall, stitching on |
+|---|---|---|
+| bernoulli 0.1 | 0.593 | 0.963 |
+| bernoulli 0.2 | 0.370 | 0.704 |
+| bernoulli 0.3 | 0.333 | 0.593 |
+| burst 0.05 (len 4) | 0.778 | 0.889 |
+| burst 0.05 (len 8) | 0.630 | 0.630 |
+
+Precision stays 1.000 in every cell, and the clean-set gate holds
+(P/R/F1 = 1.000 with stitching on). Two honest boundary findings: (1) the
+gates (gap ≤ 5 frames, ≤ 50 px) were tightened after looser gates mis-merged
+distinct vehicles in dense traffic, dropping clean-set recall to 0.778 —
+geometry-only stitching has an inherent mis-merge risk in dense
+same-direction queues; (2) bursts longer than the stitch gate (len 8 > 5) are
+not bridged by construction — the len-8 row marks the method's limit.
+
 System: the pipeline processes the 50-frame synthetic demo clip at ~23 fps on
 an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done
 (stretch goal, **not run**).
@@ -67,8 +90,9 @@ an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done
 - Signal state is a color/ROI heuristic, not a learned classifier.
 - Event-level metrics on real video rest on 3 short clips (20.1 s) with a
   handful of constructed violations — a smoke test, not field performance.
-- Remaining occlusion risk: long gaps still fragment tracks (wrong-way recall
-  is a lower bound); track stitching is the natural follow-up.
+- Remaining occlusion risk: gaps beyond the stitch gate (5 frames) still
+  fragment tracks, and geometry-only stitching can mis-merge in dense queues;
+  an appearance/re-id model would be the next step.
 - Plate blurring uses a heuristic plate band; the ANPR module does not feed
   the blur step.
 - Helmet/plate detectors are trained on third-party datasets (licenses in

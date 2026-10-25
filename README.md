@@ -98,6 +98,10 @@ python scripts/run_video.py --video <clip.mp4> --weights weights/detector.pt
 Note: trackeval 1.3.0 only allows the 'pedestrian' class slot for custom MOT
 benchmarks; vehicle GT is mapped to that slot (class id 1).
 
+Track stitching (geometry-only, on by default via `configs/tracker.yaml`)
+re-links tracklets across short gaps; the event-level dropout study is in
+`docs/EVENT_ROBUSTNESS.md` (regenerate with `python scripts/eval_dropout.py`).
+
 ## Scene calibration + signal state (Phase 3)
 
 ```bash

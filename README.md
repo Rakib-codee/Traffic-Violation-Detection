@@ -1,102 +1,164 @@
-# Traffic Violation Detection
+<div align="center">
 
-End-to-end pipeline that detects and tracks vehicles in traffic video, understands
-the scene (lanes, stop line, signal state), applies rules to flag candidate
-violations, and produces reviewable evidence through a dashboard.
+# 🚦 Traffic Violation Detection
+
+**End-to-end computer-vision pipeline that flags traffic-rule violations
+as reviewable candidate events — never automated penalties.**
+
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230?logo=ruff&logoColor=white)](pyproject.toml)
+[![Tests: pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)](tests/)
+[![Docker](https://img.shields.io/badge/demo-docker-2496ED?logo=docker&logoColor=white)](Dockerfile)
 
 ![Vehicle detection and tracking on a UA-DETRAC sample clip](docs/assets/demo-tracking.gif)
 
-**Scope note:** output is always a *candidate event for human review* — never an
-automated penalty. Plates and faces are blurred in stored outputs by default.
+*Detection + ByteTrack tracking on real footage (UA-DETRAC MVI_20012).
+Plates and faces are blurred in stored evidence by default.*
 
-## Highlights
+[Quick start](#-quick-start) · [Results](#-results) · [Novelty](#-novelty-track-stitching) · [Docs](#-documentation) · [Reproduce](#-reproducibility)
 
-- **Vehicle detector** mAP@0.5 **0.970** / mAP@0.5:0.95 **0.841** (UA-DETRAC val);
-  helmet 0.920, plate 0.974 — per-class tables in `docs/RESULTS.md`
-- **Event-level rule evaluation on real video**: precision/recall/F1 **1.000**
-  on a hand-verified 3-clip set (negative, wrong-way, red-light) —
-  `configs/event_set.yaml`
-- **Track stitching (novelty)**: geometry-only tracklet re-linking lifts
-  event recall from 0.33 → 0.59 → up to 0.96 under 10–30% track dropout, with
-  no precision cost — `docs/EVENT_ROBUSTNESS.md`
-- Robust under night/rain/glare degradations (mAP@0.5 drop ≤ 0.03) —
-  `docs/ROBUSTNESS.md`
-- Fresh-clone demo: `make demo`, or `docker run --rm tvd` — no datasets or
-  trained weights needed
+</div>
 
-## Architecture
+---
 
+## 📋 Contents
+
+- [Overview](#-overview)
+- [Highlights](#-highlights)
+- [Architecture](#-architecture)
+- [Quick start](#-quick-start)
+- [Results](#-results)
+- [Novelty: track stitching](#-novelty-track-stitching)
+- [Usage guide](#-usage-guide)
+- [Documentation](#-documentation)
+- [Reproducibility](#-reproducibility)
+- [Privacy & ethics](#-privacy--ethics)
+
+## 🔍 Overview
+
+Traffic violations are rare events buried in hours of footage. This system
+detects and tracks vehicles, understands each camera's scene (stop line,
+lanes, signal state), applies a rule engine (red-light, wrong-way; helmet
+non-use as an extension), and produces blurred, review-ready evidence clips
+behind a FastAPI + Streamlit dashboard.
+
+> **Scope note:** every output is a *candidate event for human review* —
+> never an automated penalty. Raw footage of people is never committed.
+
+## ✨ Highlights
+
+| | |
+|---|---|
+| 🎯 **Vehicle detector** | mAP@0.5 **0.970** / mAP@0.5:0.95 **0.841** (UA-DETRAC val) |
+| 🪖 **Extension detectors** | helmet **0.920**, plate **0.974** mAP@0.5 |
+| 🎬 **Real-video event eval** | P = R = F1 = **1.000** on a hand-verified 3-clip set |
+| 🧩 **Track stitching (novelty)** | event recall **0.33 → 0.59 → 0.96** under 10–30% track dropout, zero precision cost |
+| 🌧️ **Degradation robustness** | night/rain/glare mAP@0.5 drop ≤ **0.03** |
+| 📦 **Fresh-clone demo** | `make demo` or `docker run --rm tvd` — no datasets or weights needed |
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    V[📹 Video / RTSP] --> D[YOLO detection]
+    D --> T[ByteTrack<br/>+ track stitching]
+    T --> S[Scene config<br/>stop line · lanes · signal ROI]
+    S --> G[Signal heuristic<br/>red / yellow / green]
+    T --> R[Rule engine<br/>red-light · wrong-way · helmet]
+    G --> R
+    R --> E[Evidence builder<br/>blurred clip + JSON]
+    E --> DB[(SQLite)]
+    DB --> A[FastAPI]
+    DB --> U[Streamlit dashboard]
 ```
-video -> YOLO detection -> ByteTrack (+ track stitching)
-      -> scene config (stop line, lanes, signal ROI) -> signal heuristic
-      -> rule engine (red-light, wrong-way, helmet) -> evidence (blurred clip + JSON)
-      -> SQLite -> FastAPI + Streamlit review dashboard
-```
 
-Extensions: helmet non-use, optional ANPR (both off by default for privacy).
+Everything is driven by YAML configs (per-camera scene calibration, tracker,
+extensions) — no magic numbers in code. Extensions (helmet, ANPR) are off by
+default for privacy.
 
-## Setup
+## 🚀 Quick start
+
+**Option A — local, from a fresh clone** (COCO weights only, no datasets):
 
 ```bash
-make setup        # create .venv and install pinned dependencies
-make test         # run the test suite
-make lint         # ruff check + format check
+make setup
+make demo        # synthetic video -> pipeline -> rule eval
 ```
 
-## Quick start
-
-```bash
-make run          # generate a synthetic sample video into data/samples/
-```
-
-## Demo (fresh clone, no trained weights)
-
-`make demo` generates the synthetic sample video, runs the full pipeline with
-the COCO `yolov8n.pt` weights (auto-downloaded) and all extension modules
-disabled (`configs/extensions.demo.yaml`), then runs the rule-engine eval.
-It needs no datasets or trained weights:
-
-```bash
-make demo
-```
-
-To use the trained vehicle/helmet/plate detectors instead, point
-`--weights weights/detector.pt` and `configs/extensions.yaml` (Phase 6).
-
-## Demo video (real clip)
-
-With the trained detector weights in place (`weights/detector.pt`), render an
-annotated tracking video of the bundled UA-DETRAC sample clip:
-
-```bash
-python scripts/run_video.py --video data/samples/detrac_mvi20012.mp4 \
-    --weights weights/detector.pt --run-name detrac-demo
-# -> results/tracking/detrac-demo/annotated.mp4 (gitignored)
-
-# README hero GIF from that annotated video (docs/assets/, committed):
-python scripts/make_demo_gif.py
-```
-
-The clip shows normal traffic, so the rule engine correctly flags no events;
-it demonstrates detection and tracking, not a violation. For flagged-event
-evidence clips, run `scripts/run_pipeline.py` on footage containing a
-violation (evidence lands in `results/pipeline/<run>/evidence/`).
-
-## Docker
-
-CPU-only image that reproduces the demo (and can run the test suite) with no
-datasets or trained weights:
+**Option B — Docker** (CPU-only, nothing to install):
 
 ```bash
 docker build -t tvd .
 docker run --rm tvd                          # synthetic demo + rule eval
-docker run --rm tvd python -m pytest -q      # test suite instead
+docker run --rm tvd python -m pytest -q      # 102-test suite instead
 ```
 
-The image downloads the COCO `yolov8n.pt` weights on first run; outputs land
-under `results/` inside the container.
+**Option C — real footage** (needs trained weights, gitignored):
 
-## Detection (Phase 1)
+```bash
+# annotated tracking video of the bundled UA-DETRAC sample:
+python scripts/run_video.py --video data/samples/detrac_mvi20012.mp4 \
+    --weights weights/detector.pt --run-name detrac-demo
+
+# full pipeline with evidence + dashboard:
+python scripts/run_pipeline.py --video <clip.mp4> --scene configs/scene.<cam>.yaml \
+    --weights weights/detector.pt
+streamlit run src/tvd/ui/dashboard.py -- --db results/events.db
+```
+
+## 📊 Results
+
+All numbers come from real, seeded runs; unmeasured items are marked "not run"
+in `docs/REPORT.md`.
+
+<details open>
+<summary><b>Detection mAP</b> (val splits, seed 42 — full tables in <code>docs/RESULTS.md</code>)</summary>
+
+| model | mAP@0.5 | mAP@0.5:0.95 |
+|---|---|---|
+| vehicle (`weights/detector.pt`, UA-DETRAC val, 500 img) | 0.970 | 0.841 |
+| helmet (`weights/helmet.pt`, 372 img) | 0.920 | 0.586 |
+| plate (`weights/plate.pt`, 2048 img) | 0.974 | 0.687 |
+
+Degradations (UA-DETRAC val, `docs/ROBUSTNESS.md`): night 0.947 · rain 0.970 ·
+glare 0.969 vs clean 0.970 (mAP@0.5).
+</details>
+
+<details open>
+<summary><b>Event-level rules</b> (synthetic scenarios + real-video constructed set)</summary>
+
+| suite | P | R | F1 |
+|---|---|---|---|
+| 9 synthetic-trajectory scenarios | 1.000 | 1.000 | 1.000 |
+| 3-clip real-video set (negative · wrong-way · red-light) | 1.000 | 1.000 | 1.000 |
+
+The real-video set (`configs/event_set.yaml`) uses ground truth by
+construction (reversed playback, synthetic signal overlay) and caught two
+real failure modes before field use — see `docs/REPORT.md`.
+</details>
+
+## 🧩 Novelty: track stitching
+
+Tracker gaps and ID switches fragment vehicles, so rule engines silently lose
+violations. This project adds a **lightweight online tracklet stitcher**
+(`src/tvd/track/stitch.py`) — constant-velocity geometric gating, no re-id
+model — with a matching gap tolerance in the rule engine.
+
+Event recall under seeded track dropout (means over 3 seeds, precision = 1.000
+everywhere; `docs/EVENT_ROBUSTNESS.md`):
+
+| dropout | stitching off | stitching on |
+|---|---|---|
+| 10% random | 0.593 | **0.963** |
+| 20% random | 0.370 | **0.704** |
+| 30% random | 0.333 | **0.593** |
+| occlusion bursts (4 f) | 0.778 | **0.889** |
+| occlusion bursts (8 f) | 0.630 | 0.630 *(beyond the gate — honest limit)* |
+
+## 📖 Usage guide
+
+<details>
+<summary><b>Train & evaluate the detector</b> (Phase 1)</summary>
 
 ```bash
 # put a YOLO-format dataset in data/ (see docs/DATA.md), then:
@@ -108,8 +170,10 @@ python scripts/train_detector.py --train-config configs/train.smoke.yaml
 
 The eval script regenerates `docs/RESULTS.md` (committed) and
 `results/detection/<run>/metrics.json` (gitignored).
+</details>
 
-## Tracking (Phase 2)
+<details>
+<summary><b>Tracking & stitching</b> (Phase 2)</summary>
 
 ```bash
 # track a video: writes MOT tracks, trajectories CSV, annotated mp4, summary
@@ -129,25 +193,25 @@ benchmarks; vehicle GT is mapped to that slot (class id 1).
 Track stitching (geometry-only, on by default via `configs/tracker.yaml`)
 re-links tracklets across short gaps; the event-level dropout study is in
 `docs/EVENT_ROBUSTNESS.md` (regenerate with `python scripts/eval_dropout.py`).
+</details>
 
-## Scene calibration + signal state (Phase 3)
+<details>
+<summary><b>Scene calibration & signal state</b> (Phase 3)</summary>
 
 ```bash
 # interactively annotate a camera view (stop line, lanes+directions, signal ROI)
 python scripts/annotate_scene.py --camera-id cam-01 \
     --video <clip.mp4> --out configs/scene.cam-01.yaml
-
-# signal state from an ROI (heuristic baseline with majority-vote smoothing)
-python -c "from tvd.signal import classify_roi, SignalState; ..."
 ```
 
 Committed scene configs (`configs/scene.*.yaml`) are covered by
 `tests/test_scene_configs.py`: every view must validate (Phase 3 exit).
+Cameras with no visible signal set `signal_roi: null`, which disables the
+red-light rule for that view.
+</details>
 
-## Rule engine (Phase 4)
-
-Red-light (stop-line crossing while signal red, with tolerance window) and
-wrong-way (sustained opposing motion) rules run on synthetic trajectories:
+<details>
+<summary><b>Rule engine & event evaluation</b> (Phase 4)</summary>
 
 ```bash
 python scripts/eval_rules.py   # synthetic scenarios: event-level P/R/F1 + false alerts/hour
@@ -159,10 +223,11 @@ python scripts/eval_events.py
 
 The real-video set covers a negative clip (normal traffic), a constructed
 wrong-way clip (reversed playback), and a constructed red-light clip
-(synthetic signal overlay, 2 genuine events). All outputs are candidates for
-human review.
+(synthetic signal overlay, 2 genuine events).
+</details>
 
-## Evidence + dashboard (Phase 5)
+<details>
+<summary><b>Evidence pipeline & dashboard</b> (Phase 5)</summary>
 
 ```bash
 # end-to-end: video -> detect -> track -> signal -> rules -> evidence -> SQLite
@@ -177,27 +242,58 @@ streamlit run src/tvd/ui/dashboard.py -- --db results/events.db
 ```
 
 Plates/faces are blurred in stored evidence by default (the blur region is a
-heuristic plate band). Cameras with no visible signal set `signal_roi: null`,
-which disables the red-light rule for that view.
+heuristic plate band).
+</details>
 
-## Repository layout
+<details>
+<summary><b>Demo assets</b></summary>
+
+```bash
+# README hero GIF from an annotated tracking video (docs/assets/, committed):
+python scripts/make_demo_gif.py
+```
+
+The bundled sample clip shows normal traffic, so the rule engine correctly
+flags no events; for flagged-event evidence clips, run
+`scripts/run_pipeline.py` on footage containing a violation (evidence lands
+in `results/pipeline/<run>/evidence/`).
+</details>
+
+## 📚 Documentation
+
+| doc | contents |
+|---|---|
+| `docs/REPORT.md` | final report: measured results, limitations, reproduction |
+| `docs/RESULTS.md` | detector mAP tables (regenerated from real runs) |
+| `docs/EVENT_ROBUSTNESS.md` | track-dropout robustness study (stitching on/off) |
+| `docs/ROBUSTNESS.md` | night/rain/glare degradation table |
+| `docs/DATA.md` | dataset sources, licenses, download notes |
+| `docs/PRIVACY.md` | privacy & ethics note |
+| `docs/PRESENTATION.md` | slide-deck content for a project defense |
+| `docs/PORTFOLIO.md` | CV / LinkedIn / elevator-pitch text |
+
+Repository layout:
 
 ```
-configs/            model, tracker, system, and per-camera scene configs (YAML)
-src/tvd/            library code: detect/ track/ scene/ signal/ rules/ evidence/ api/ ui/ utils/
-scripts/            train, eval, run_video, sample-data generators
-tests/              pytest suite (includes rule tests on synthetic trajectories)
-data/               gitignored; see docs/DATA.md for sources and licenses
+configs/            model, tracker, system, per-camera scenes, event-set manifest (YAML)
+src/tvd/            library: detect/ track/ scene/ signal/ rules/ evidence/ api/ ui/ utils/
+scripts/            train, eval, run_video, pipeline, demo-asset generators
+tests/              pytest suite (includes synthetic-trajectory rule tests)
+data/               gitignored; see docs/DATA.md
 results/            gitignored run outputs
-docs/               data licenses, privacy/ethics notes
 ```
 
-## Reproducibility
+## 🔁 Reproducibility
 
-All runs are seeded (see `configs/system.yaml`) and log their config.
-Results files are regenerated from real runs only.
+- All runs are seeded (`configs/system.yaml`) and log their config; results
+  files are regenerated from real runs only.
+- Pinned dependencies (`pyproject.toml`); `make setup|test|lint|demo`.
+- Fresh clone reproduces the demo: `make demo` or
+  `docker build -t tvd . && docker run --rm tvd`.
 
-## Privacy and ethics
+## 🛡️ Privacy & ethics
 
-See `docs/DATA.md` for dataset licenses and `docs/` for the privacy note.
-Raw footage of people is never committed to this repository.
+Output is always a candidate for human review. Plates/faces are blurred in
+stored evidence by default; evidence clips are short windows, not continuous
+footage. See `docs/PRIVACY.md` for the operating policy and `docs/DATA.md`
+for dataset licenses. Raw footage of people is never committed.

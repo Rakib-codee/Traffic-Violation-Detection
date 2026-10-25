@@ -34,3 +34,9 @@ results/*
 .DS_Store
 .idea/
 .vscode/
+
+# Working/agent files (kept locally, not for the repo)
+Agent.md
+project plan.md
+.agents/
+.claude/

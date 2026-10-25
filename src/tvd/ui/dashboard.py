@@ -46,7 +46,7 @@ def main() -> None:
         ["event_id", "violation_type", "track_id", "camera_id", "start_frame", "end_frame"]
     ]
     chosen = st.selectbox("event", df["event_id"].tolist(), index=0)
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     if chosen:
         event = store.get_event(chosen)
@@ -54,10 +54,14 @@ def main() -> None:
         with col_clip:
             clip = Path(event["clip_path"])
             if clip.exists():
-                st.video(str(clip))
+                st.video(str(clip), alt=f"Evidence clip for event {chosen}")
             frame = Path(event["frame_path"])
             if frame.exists():
-                st.image(str(frame), caption="keyframe (blurred)")
+                st.image(
+                    str(frame),
+                    caption="keyframe (blurred)",
+                    alt=f"Blurred keyframe for event {chosen}",
+                )
         with col_meta:
             meta = Path(event["metadata_path"])
             if meta.exists():

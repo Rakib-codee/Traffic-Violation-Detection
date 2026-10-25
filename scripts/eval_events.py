@@ -74,13 +74,27 @@ def run_clip(
     scene = load_scene_config(clip.scene)
     tracker_cfg = load_tracker_config(tracker_config_path)
     tracker = Tracker(tracker_cfg, weights=str(clip.weights), device=device, work_dir=work_dir)
+    if tracker_cfg.stitch_enabled:
+        from tvd.track.stitch import TrackStitcher
+
+        tracker = TrackStitcher(
+            tracker,
+            max_gap_frames=tracker_cfg.stitch_max_gap_frames,
+            max_dist_px=tracker_cfg.stitch_max_dist_px,
+        )
     smoother = SignalSmoother(window=5)
 
     cap = cv2.VideoCapture(str(clip.video))
     if not cap.isOpened():
         raise SystemExit(f"cannot open video {clip.video}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
-    engine = RuleEngine(scene, fps=fps, min_track_duration=tracker_cfg.min_track_duration)
+    gap_tolerance = tracker_cfg.stitch_max_gap_frames if tracker_cfg.stitch_enabled else 1
+    engine = RuleEngine(
+        scene,
+        fps=fps,
+        min_track_duration=tracker_cfg.min_track_duration,
+        max_track_gap=gap_tolerance,
+    )
 
     frame_idx = 0
     ok, frame = cap.read()

@@ -31,6 +31,14 @@ def main() -> None:
 
     cfg = load_tracker_config(args.tracker_config)
     tracker = Tracker(cfg, weights=args.weights, device=args.device)
+    if cfg.stitch_enabled:
+        from tvd.track.stitch import TrackStitcher
+
+        tracker = TrackStitcher(
+            tracker,
+            max_gap_frames=cfg.stitch_max_gap_frames,
+            max_dist_px=cfg.stitch_max_dist_px,
+        )
     summary = track_video(
         args.video,
         tracker,

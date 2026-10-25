@@ -6,5 +6,5 @@ match_thresh: 0.8
 max_time_lost: 30
 min_track_duration: 5
 stitch_enabled: true
-stitch_max_gap_frames: 10
-stitch_max_dist_px: 80
+stitch_max_gap_frames: 5
+stitch_max_dist_px: 50

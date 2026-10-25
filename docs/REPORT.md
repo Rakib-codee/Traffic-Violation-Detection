@@ -72,12 +72,17 @@ than real detector loss; means over 3 seeds):
 | burst 0.05 (len 8) | 0.630 | 0.630 |
 
 Precision stays 1.000 in every cell, and the clean-set gate holds
-(P/R/F1 = 1.000 with stitching on). Two honest boundary findings: (1) the
-gates (gap ≤ 5 frames, ≤ 50 px) were tightened after looser gates mis-merged
-distinct vehicles in dense traffic, dropping clean-set recall to 0.778 —
-geometry-only stitching has an inherent mis-merge risk in dense
-same-direction queues; (2) bursts longer than the stitch gate (len 8 > 5) are
-not bridged by construction — the len-8 row marks the method's limit.
+(P/R/F1 = 1.000 with stitching on). A gate ablation (3f/30px vs 10f/80px,
+stitching on) shows the deployed mid-range gates win or tie in most cells:
+tighter gates bridge fewer gaps (recall 0.889 vs 0.963 at p=0.1), looser
+gates mis-merge nearby vehicles in dense queues — the deployed setting was
+not a lucky pick. Two honest boundary findings: (1) the gates were tightened
+after looser gates mis-merged distinct vehicles in dense traffic during
+development, dropping clean-set recall to 0.778; geometry-only stitching has
+an inherent mis-merge risk in dense same-direction queues; (2) bursts longer
+than the stitch gate (len 8 > 5) are not bridged by construction — the len-8
+row marks the method's limit. All values are mean ± std over 3 seeds; the
+IEEE-style paper package (LaTeX + figures) is in `paper/`.
 
 System: the pipeline processes the 50-frame synthetic demo clip at ~23 fps on
 an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done

@@ -17,6 +17,7 @@ from tvd.evidence.blur import blur_plate_band
 from tvd.rules import ViolationEvent
 from tvd.track.tracker import Track
 from tvd.utils import get_logger
+from tvd.utils.video import open_video_writer
 
 logger = get_logger(__name__)
 
@@ -84,9 +85,7 @@ class EvidenceBuilder:
         start, end = self._window(event, fps, total)
 
         clip_path = item_dir / "clip.mp4"
-        writer = cv2.VideoWriter(
-            str(clip_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
-        )
+        writer = open_video_writer(str(clip_path), fps, (width, height))
         keyframe_idx = (event.start_frame + event.end_frame) // 2
         frame_path = item_dir / "keyframe.jpg"
 

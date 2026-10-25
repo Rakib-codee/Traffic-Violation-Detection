@@ -14,6 +14,7 @@ from tvd.config import TrackerConfig
 from tvd.track.mot import track_to_row, write_mot
 from tvd.track.tracker import Track, Tracker
 from tvd.utils import get_logger
+from tvd.utils.video import open_video_writer
 
 logger = get_logger(__name__)
 
@@ -56,12 +57,7 @@ def track_video(
 
     writer = None
     if annotate:
-        writer = cv2.VideoWriter(
-            str(out_dir / "annotated.mp4"),
-            cv2.VideoWriter_fourcc(*"mp4v"),
-            fps,
-            (width, height),
-        )
+        writer = open_video_writer(str(out_dir / "annotated.mp4"), fps, (width, height))
 
     all_tracks: list[Track] = []
     n_frames = 0

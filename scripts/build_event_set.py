@@ -5,6 +5,9 @@ documented as such in configs/event_set.yaml and docs/DATA.md:
 
 - reverse: plays a clip backwards, so every moving vehicle drives against the
   lane direction by construction (wrong-way ground truth).
+- signal overlay: draws a synthetic signal lamp in a fixed corner (green for
+  the first `green_until` frames, then red), so stop-line crossings during
+  the red window are red-light violations by construction.
 
 Outputs land in data/events/ (gitignored). Re-running is deterministic.
 """
@@ -47,6 +50,39 @@ def reverse_video(src: Path, dst: Path) -> int:
     return len(frames)
 
 
+def overlay_signal(src: Path, dst: Path, green_until: int) -> int:
+    """Copy src with a synthetic signal lamp drawn in the top-left corner.
+
+    The lamp is green through frame `green_until`, then red. The lamp area is
+    fully saturated so the ROI color heuristic classifies it unambiguously;
+    the matching scene config must point signal_roi at the lamp (see
+    configs/scene.detrac-mvi20012-signal.yaml).
+    """
+    cap = cv2.VideoCapture(str(src))
+    if not cap.isOpened():
+        raise SystemExit(f"cannot open video {src}")
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    writer = cv2.VideoWriter(str(dst), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+    frame_idx = 0
+    ok, frame = cap.read()
+    while ok:
+        frame_idx += 1
+        color = (0, 255, 0) if frame_idx <= green_until else (0, 0, 255)  # BGR
+        cv2.rectangle(frame, (8, 8), (54, 94), (40, 40, 40), -1)  # housing
+        cv2.circle(frame, (31, 30), 16, color, -1)  # active lamp
+        cv2.circle(frame, (31, 70), 16, (60, 60, 60), -1)  # dark second lamp
+        writer.write(frame)
+        ok, frame = cap.read()
+    cap.release()
+    writer.release()
+    logger.info("wrote %d frames (signal overlay, green<=%d) to %s", frame_idx, green_until, dst)
+    return frame_idx
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples-dir", default="data/samples")
@@ -58,6 +94,10 @@ def main() -> None:
 
     # wrong-way by construction: all moving traffic opposes the lane direction
     reverse_video(samples / "detrac_mvi20012.mp4", out_dir / "detrac_mvi20012_reversed.mp4")
+
+    # red-light by construction: green through frame 25, red afterwards; the
+    # only stop-line crossing in the red window is the car at frame ~40
+    overlay_signal(samples / "detrac_mvi20012.mp4", out_dir / "detrac_mvi20012_signal.mp4", 25)
 
 
 if __name__ == "__main__":

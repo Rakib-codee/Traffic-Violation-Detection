@@ -1,0 +1,33 @@
+# Variant of configs/scene.detrac-mvi20012.yaml for the constructed red-light
+# eval clip (data/events/detrac_mvi20012_signal.mp4, built by
+# scripts/build_event_set.py). Same geometry, but signal_roi points at the
+# synthetic signal lamp the builder draws at the top-left corner.
+camera_id: detrac-mvi20012-signal
+stop_line:
+  - {x: 262, y: 480}
+  - {x: 500, y: 480}
+lanes:
+  - name: near-lane-left
+    polygon:
+      - {x: 262, y: 500}
+      - {x: 360, y: 500}
+      - {x: 330, y: 60}
+      - {x: 290, y: 60}
+    direction: {x: 0, y: 1}
+  - name: near-lane-right
+    polygon:
+      - {x: 360, y: 500}
+      - {x: 470, y: 500}
+      - {x: 390, y: 60}
+      - {x: 330, y: 60}
+    direction: {x: 0, y: 1}
+  - name: far-lane-away
+    polygon:
+      - {x: 430, y: 30}
+      - {x: 490, y: 30}
+      - {x: 580, y: 220}
+      - {x: 545, y: 260}
+    direction: {x: 0, y: -1}
+signal_roi: {x: 15, y: 14, width: 32, height: 32}
+red_light_tolerance_s: 0.3
+wrong_way_min_frames: 10

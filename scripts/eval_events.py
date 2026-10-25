@@ -14,99 +14,14 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass
 from pathlib import Path
 
-import cv2
-
-from tvd.config import (
-    EventClip,
-    load_event_set_config,
-    load_scene_config,
-    load_tracker_config,
-)
-from tvd.rules import RuleEngine, ViolationEvent
-from tvd.signal import SignalSmoother
-from tvd.track.tracker import Tracker
+from tvd.config import load_event_set_config
+from tvd.pipeline import run_clip
+from tvd.rules import EventWindow, match_events
 from tvd.utils import get_logger
 
 logger = get_logger(__name__)
-
-
-@dataclass
-class _EventWindow:
-    type: str
-    start_frame: int
-    end_frame: int
-
-
-def _windows_overlap(a: _EventWindow, b: _EventWindow, tolerance: int) -> bool:
-    return a.start_frame <= b.end_frame + tolerance and b.start_frame <= a.end_frame + tolerance
-
-
-def match_events(
-    predicted: list[_EventWindow], expected: list[_EventWindow], tolerance: int
-) -> tuple[int, int, int]:
-    """Greedy one-to-one matching by type and ±tolerance frame overlap.
-
-    Returns (tp, fp, fn). Each predicted event matches at most one expected
-    event and vice versa.
-    """
-    expected_used = [False] * len(expected)
-    tp = 0
-    for pred in sorted(predicted, key=lambda e: e.start_frame):
-        for i, exp in enumerate(expected):
-            if expected_used[i] or exp.type != pred.type:
-                continue
-            if _windows_overlap(pred, exp, tolerance):
-                expected_used[i] = True
-                tp += 1
-                break
-    fp = len(predicted) - tp
-    fn = len(expected) - sum(expected_used)
-    return tp, fp, fn
-
-
-def run_clip(
-    clip: EventClip, tracker_config_path: str, device: str, work_dir: Path
-) -> tuple[list[ViolationEvent], int, float]:
-    """Run the core rule pipeline on one clip; returns (events, frames, fps)."""
-    scene = load_scene_config(clip.scene)
-    tracker_cfg = load_tracker_config(tracker_config_path)
-    tracker = Tracker(tracker_cfg, weights=str(clip.weights), device=device, work_dir=work_dir)
-    if tracker_cfg.stitch_enabled:
-        from tvd.track.stitch import TrackStitcher
-
-        tracker = TrackStitcher(
-            tracker,
-            max_gap_frames=tracker_cfg.stitch_max_gap_frames,
-            max_dist_px=tracker_cfg.stitch_max_dist_px,
-        )
-    smoother = SignalSmoother(window=5)
-
-    cap = cv2.VideoCapture(str(clip.video))
-    if not cap.isOpened():
-        raise SystemExit(f"cannot open video {clip.video}")
-    fps = cap.get(cv2.CAP_PROP_FPS) or 25
-    gap_tolerance = tracker_cfg.stitch_max_gap_frames if tracker_cfg.stitch_enabled else 1
-    engine = RuleEngine(
-        scene,
-        fps=fps,
-        min_track_duration=tracker_cfg.min_track_duration,
-        max_track_gap=gap_tolerance,
-    )
-
-    frame_idx = 0
-    ok, frame = cap.read()
-    while ok:
-        frame_idx += 1
-        tracks = tracker.track_frame(frame, frame_idx)
-        if scene.signal_roi is not None:
-            engine.set_signal_state(frame_idx, smoother.update(frame, scene.signal_roi))
-        engine.update(frame_idx, tracks)
-        ok, frame = cap.read()
-    cap.release()
-    return list(engine.events), frame_idx, fps
 
 
 def evaluate(
@@ -124,9 +39,9 @@ def evaluate(
     for clip in manifest.clips:
         events, n_frames, fps = run_clip(clip, tracker_config, device, out_dir / "work")
         predicted = [
-            _EventWindow(e.violation_type.value, e.start_frame, e.end_frame) for e in events
+            EventWindow(e.violation_type.value, e.start_frame, e.end_frame) for e in events
         ]
-        expected = [_EventWindow(e.type, e.start_frame, e.end_frame) for e in clip.expected_events]
+        expected = [EventWindow(e.type, e.start_frame, e.end_frame) for e in clip.expected_events]
         c_tp, c_fp, c_fn = match_events(predicted, expected, tolerance)
         tp, fp, fn = tp + c_tp, fp + c_fp, fn + c_fn
         total_seconds += n_frames / fps

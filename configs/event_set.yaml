@@ -33,13 +33,14 @@ clips:
     video: data/events/detrac_mvi20012_signal.mp4
     scene: configs/scene.detrac-mvi20012-signal.yaml
     expected_events:
-      # synthetic signal: green frames 1-25, red 26-67. Physical ground truth:
-      # the van crosses the stop line at frame ~13 on GREEN (no violation);
-      # the silver car crosses at frame ~32 on RED (one violation).
-      # The pipeline fires 3 events here: the genuine one (~32) plus two
-      # tracker artifacts that this set deliberately reports, not hides:
-      # (a) the van's bounding-box bottom re-crosses the line at ~37 when an
-      # occlusion clears, (b) the same silver car is re-flagged at ~40 after
-      # a tracker ID switch. So this clip scores tp=1 fp=2 and the mismatch
-      # is the honest steady state (see docs/REPORT.md).
-      - {type: red_light, start_frame: 32, end_frame: 32, note: "silver car crosses stop line on red"}
+      # synthetic signal: green frames 1-25, red 26-67. Physical ground truth
+      # (verified by frame-by-frame video review): the van crosses at ~13 on
+      # GREEN (legal); TWO cars in near-lane-right cross on RED — car A at
+      # ~frame 32 and car B following behind at ~frame 40. An earlier reading
+      # of car B's event as an ID-switch duplicate was wrong: tracks 6 and 7
+      # coexist at different depths in frames 1-11 and are two vehicles.
+      # The only spurious firing was the van's bbox re-cross at ~37 when an
+      # occlusion cleared; it is now suppressed by the rule engine's recross
+      # window (red_light_recross_s).
+      - {type: red_light, start_frame: 32, end_frame: 32, note: "car A crosses stop line on red"}
+      - {type: red_light, start_frame: 40, end_frame: 40, note: "car B crosses stop line on red"}

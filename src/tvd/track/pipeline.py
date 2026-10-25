@@ -90,7 +90,9 @@ def track_video(
         )
         w.writeheader()
         for t in all_tracks:
-            w.writerow(asdict(t))
+            row = asdict(t)
+            row["frame"] = row.pop("frame_idx")
+            w.writerow(row)
 
     long_tracks = {t.track_id for t in all_tracks}
     summary = {

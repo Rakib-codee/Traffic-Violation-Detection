@@ -38,6 +38,22 @@ make demo
 To use the trained vehicle/helmet/plate detectors instead, point
 `--weights weights/detector.pt` and `configs/extensions.yaml` (Phase 6).
 
+## Demo video (real clip)
+
+With the trained detector weights in place (`weights/detector.pt`), render an
+annotated tracking video of the bundled UA-DETRAC sample clip:
+
+```bash
+python scripts/run_video.py --video data/samples/detrac_mvi20012.mp4 \
+    --weights weights/detector.pt --run-name detrac-demo
+# -> results/tracking/detrac-demo/annotated.mp4 (gitignored)
+```
+
+The clip shows normal traffic, so the rule engine correctly flags no events;
+it demonstrates detection and tracking, not a violation. For flagged-event
+evidence clips, run `scripts/run_pipeline.py` on footage containing a
+violation (evidence lands in `results/pipeline/<run>/evidence/`).
+
 ## Docker
 
 CPU-only image that reproduces the demo (and can run the test suite) with no

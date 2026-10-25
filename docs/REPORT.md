@@ -1,0 +1,64 @@
+# Final report
+
+Short summary of the system, measured results, and known limits. All numbers
+come from real, seeded runs; artifacts not yet run are marked **not run**.
+Detailed tables: `docs/RESULTS.md`, `docs/ROBUSTNESS.md`; data sources and
+licenses: `docs/DATA.md`; privacy/ethics: `docs/PRIVACY.md`.
+
+## System
+
+Video -> YOLO detection -> ByteTrack tracking -> scene config (stop line,
+lanes, signal ROI) -> signal-state heuristic with temporal smoothing -> rule
+engine (red-light, wrong-way) -> evidence builder (blurred clip + keyframe +
+JSON) -> SQLite -> FastAPI + Streamlit review dashboard. Phase 6 adds an
+optional helmet rule (secondary detector on motorcycle crops), an optional
+ANPR module, and a robustness evaluation.
+
+Every output is a candidate event for human review, never an automated
+penalty. Plates/faces are blurred in stored evidence by default.
+
+## Measured results
+
+Detection (val splits, seed 42; per-class tables in `docs/RESULTS.md`):
+
+| model | mAP@0.5 | mAP@0.5:0.95 |
+|---|---|---|
+| vehicle detector (`weights/detector.pt`, UA-DETRAC val, 500 imgs) | 0.9702 | 0.8407 |
+| helmet detector (`weights/helmet.pt`, 372 imgs) | 0.9204 | 0.5864 |
+| plate detector (`weights/plate.pt`, 2048 imgs) | 0.9738 | 0.6873 |
+
+Robustness (vehicle detector under deterministic degradations, UA-DETRAC val;
+mAP@0.5): night 0.9466, rain 0.9698, glare 0.9694 vs clean 0.9702.
+
+Rule engine (7 synthetic-trajectory scenarios): precision 1.000, recall 1.000,
+F1 1.000, 0.0 false alerts/hour. The scenario suite is synthetic by
+construction; the hand-labeled real-video event set is **not run** (too small
+to label yet).
+
+Tracking: ByteTrack is integrated and produces stable IDs on the sample clips
+used during development; the UA-DETRAC benchmark eval (HOTA/IDF1/ID switches)
+is **not run** — dataset access was requested by the repo owner and is still
+pending (see `docs/DATA.md`).
+
+System: the pipeline processes the 50-frame synthetic demo clip at ~23 fps on
+an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done
+(stretch goal, **not run**).
+
+## Limitations
+
+- Red-light rule depends on per-camera scene calibration and a visible signal
+  ROI; views without one have the rule disabled by config.
+- Signal state is a color/ROI heuristic, not a learned classifier.
+- Event-level metrics on real video are unmeasured; treat the synthetic
+  scenario results as unit tests, not field performance.
+- Plate blurring uses a heuristic plate band; the ANPR module does not feed
+  the blur step.
+- Helmet/plate detectors are trained on third-party datasets (licenses in
+  `docs/DATA.md`); check regional fit before reuse.
+
+## Reproduction
+
+Fresh clone: `make setup && make demo` (COCO weights only, no datasets), or
+`docker build -t tvd . && docker run --rm tvd`. Full pipeline with trained
+weights: see README (weights and datasets are gitignored; training notebooks
+in `notebooks/`).

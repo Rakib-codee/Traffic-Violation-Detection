@@ -11,7 +11,7 @@ from pathlib import Path
 
 import cv2
 
-from tvd.config import EventClip, load_scene_config, load_tracker_config
+from tvd.config import EventClip, TrackerConfig, load_scene_config, load_tracker_config
 from tvd.rules import RuleEngine, ViolationEvent
 from tvd.signal import SignalSmoother
 from tvd.track.tracker import Tracker
@@ -27,14 +27,21 @@ def run_clip(
     work_dir: Path,
     stitch: bool | None = None,
     tracker_transform=None,
+    config_override: dict | None = None,
 ) -> tuple[list[ViolationEvent], int, float]:
     """Run the core rule pipeline on one clip; returns (events, frames, fps).
 
     `stitch` overrides the config's stitch_enabled; `tracker_transform` wraps
-    the base tracker before stitching (used by the dropout robustness study).
+    the base tracker before stitching (used by the dropout robustness study);
+    `config_override` patches tracker config fields (used for gate ablation).
     """
     scene = load_scene_config(clip.scene)
-    tracker_cfg = load_tracker_config(tracker_config_path)
+    if config_override:
+        from tvd.config import load_yaml
+
+        tracker_cfg = TrackerConfig(**{**load_yaml(tracker_config_path), **config_override})
+    else:
+        tracker_cfg = load_tracker_config(tracker_config_path)
     tracker = Tracker(tracker_cfg, weights=str(clip.weights), device=device, work_dir=work_dir)
     if tracker_transform is not None:
         tracker = tracker_transform(tracker)

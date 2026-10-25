@@ -15,10 +15,11 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import statistics
 from dataclasses import dataclass
 from pathlib import Path
 
-from tvd.config import load_event_set_config
+from tvd.config import load_event_set_config, load_tracker_config
 from tvd.pipeline import run_clip
 from tvd.rules import EventWindow, match_events
 from tvd.utils import get_logger
@@ -31,6 +32,9 @@ BERNOULLI_LEVELS = (0.1, 0.2, 0.3)
 # stitchable regime and the gate boundary
 BURST_LEVELS = ((0.05, 4), (0.05, 8))
 SEEDS = (1, 2, 3)
+# stitch-gate ablation settings: (max_gap_frames, max_dist_px); the config's
+# own gates are measured by the main table, so the ablation skips them
+ABLATION_GATES = ((3, 30), (10, 80))
 
 
 @dataclass
@@ -66,7 +70,18 @@ class TrackDropout:
         return out
 
 
-def run_cell(manifest, tracker_config, device, work_dir, mode, level, stitch, seeds, burst_len=8):
+def run_cell(
+    manifest,
+    tracker_config,
+    device,
+    work_dir,
+    mode,
+    level,
+    stitch,
+    seeds,
+    burst_len=8,
+    config_override=None,
+):
     """One (mode, level, stitching) cell; returns per-seed metrics."""
     per_seed = []
     for seed in seeds:
@@ -85,6 +100,7 @@ def run_cell(manifest, tracker_config, device, work_dir, mode, level, stitch, se
                 work_dir,
                 stitch=stitch,
                 tracker_transform=transform,
+                config_override=config_override,
             )
             predicted = [
                 EventWindow(e.violation_type.value, e.start_frame, e.end_frame) for e in events
@@ -125,6 +141,14 @@ def mean_metric(per_seed, key):
     return round(sum(s[key] for s in per_seed) / len(per_seed), 3)
 
 
+def std_metric(per_seed, key):
+    return round(statistics.pstdev(s[key] for s in per_seed), 3)
+
+
+def fmt(per_seed, key):
+    return f"{mean_metric(per_seed, key):.3f} ± {std_metric(per_seed, key):.3f}"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="configs/event_set.yaml")
@@ -135,6 +159,8 @@ def main() -> None:
 
     manifest = load_event_set_config(args.manifest)
     out_dir = Path(args.out_dir)
+    cfg = load_tracker_config(args.tracker_config)
+    cfg_gates = (cfg.stitch_max_gap_frames, cfg.stitch_max_dist_px)
     # cell = (mode label, dropout param, burst length used when mode is burst)
     cells = [("bernoulli", p, None) for p in BERNOULLI_LEVELS]
     cells += [("burst", p, length) for p, length in BURST_LEVELS]
@@ -155,6 +181,32 @@ def main() -> None:
             )
             results[(mode, level, burst_len, stitch)] = per_seed
 
+    # stitch-gate ablation (stitching on); gates equal to the config are
+    # already measured in the main table
+    ablation = {}
+    for gap, dist in ABLATION_GATES:
+        if (gap, dist) == cfg_gates:
+            continue
+        for mode, level, burst_len in cells:
+            override = {
+                "stitch_enabled": True,
+                "stitch_max_gap_frames": gap,
+                "stitch_max_dist_px": dist,
+            }
+            per_seed = run_cell(
+                manifest,
+                args.tracker_config,
+                args.device,
+                out_dir / "work",
+                mode,
+                level,
+                True,
+                SEEDS,
+                burst_len=burst_len or 8,
+                config_override=override,
+            )
+            ablation[(mode, level, burst_len, gap, dist)] = per_seed
+
     lines = [
         "# Event-level robustness under track dropout",
         "",
@@ -162,9 +214,9 @@ def main() -> None:
         "",
         f"Event set: {args.manifest} (3 clips). Dropout is a post-hoc surrogate",
         "for detector/tracker misses (harsher than real detector loss). Burst cells",
-        "show the burst length in parentheses; the stitch gate is",
-        "configs/tracker.yaml stitch_max_gap_frames, so len-8 bursts sit beyond it.",
-        f"Means over seeds {SEEDS}.",
+        f"show the burst length in parentheses; the stitch gate is {cfg_gates[0]} frames"
+        f" / {cfg_gates[1]:.0f} px, so len-8 bursts sit beyond it.",
+        f"Values are mean ± std over seeds {SEEDS}.",
         "",
         "| mode | dropout | stitching | precision | recall | F1 |",
         "|---|---|---|---|---|---|",
@@ -175,18 +227,51 @@ def main() -> None:
             label = f"{level} (len {burst_len})" if burst_len else str(level)
             lines.append(
                 f"| {mode} | {label} | {'on' if stitch else 'off'} "
-                f"| {mean_metric(per_seed, 'precision'):.3f} "
-                f"| {mean_metric(per_seed, 'recall'):.3f} "
-                f"| {mean_metric(per_seed, 'f1'):.3f} |"
+                f"| {fmt(per_seed, 'precision')} | {fmt(per_seed, 'recall')} "
+                f"| {fmt(per_seed, 'f1')} |"
             )
+
+    if ablation:
+        lines += [
+            "",
+            "Stitch-gate ablation (stitching on; mean ± std over seeds). Gates are "
+            "(max gap frames / max distance px):",
+            "",
+            "| mode | dropout | gates | precision | recall | F1 |",
+            "|---|---|---|---|---|---|",
+        ]
+        for (mode, level, burst_len, gap, dist), per_seed in sorted(
+            ablation.items(), key=lambda kv: (str(kv[0][0]), kv[0][1])
+        ):
+            label = f"{level} (len {burst_len})" if burst_len else str(level)
+            lines.append(
+                f"| {mode} | {label} | {gap}f/{dist:.0f}px "
+                f"| {fmt(per_seed, 'precision')} | {fmt(per_seed, 'recall')} "
+                f"| {fmt(per_seed, 'f1')} |"
+            )
+        lines += [
+            "",
+            f"Current config gates ({cfg_gates[0]}f/{cfg_gates[1]:.0f}px) are in the main "
+            "table above.",
+        ]
+
     doc = "\n".join(lines) + "\n"
     Path("docs/EVENT_ROBUSTNESS.md").write_text(doc)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = {
-        f"{mode}/{level}{f' (len {burst_len})' if burst_len else ''}"
-        f"/stitch={'on' if stitch else 'off'}": per_seed
-        for (mode, level, burst_len, stitch), per_seed in results.items()
+        "main": {
+            f"{mode}/{level}{f' (len {burst_len})' if burst_len else ''}"
+            f"/stitch={'on' if stitch else 'off'}": per_seed
+            for (mode, level, burst_len, stitch), per_seed in results.items()
+        },
+        "gate_ablation": {
+            (
+                f"{mode}/{level}{f' (len {burst_len})' if burst_len else ''}/{gap}f/{dist:.0f}px"
+            ): per_seed
+            for (mode, level, burst_len, gap, dist), per_seed in ablation.items()
+        },
+        "config_gates": list(cfg_gates),
     }
     (out_dir / "metrics.json").write_text(json.dumps(payload, indent=2))
     logger.info("wrote docs/EVENT_ROBUSTNESS.md and %s", out_dir / "metrics.json")

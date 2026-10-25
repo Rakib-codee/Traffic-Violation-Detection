@@ -47,6 +47,14 @@ def run_pipeline(
     scene = load_scene_config(scene_config)
     tracker_cfg = load_tracker_config(tracker_config)
     tracker = Tracker(tracker_cfg, weights=weights, device=device, work_dir=out_dir)
+    if tracker_cfg.stitch_enabled:
+        from tvd.track.stitch import TrackStitcher
+
+        tracker = TrackStitcher(
+            tracker,
+            max_gap_frames=tracker_cfg.stitch_max_gap_frames,
+            max_dist_px=tracker_cfg.stitch_max_dist_px,
+        )
 
     ext = load_extensions_config(extensions_config)
     helmet_rule = None
@@ -66,7 +74,13 @@ def run_pipeline(
         raise SystemExit(f"cannot open video {video}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
 
-    engine = RuleEngine(scene, fps=fps, min_track_duration=tracker_cfg.min_track_duration)
+    gap_tolerance = tracker_cfg.stitch_max_gap_frames if tracker_cfg.stitch_enabled else 1
+    engine = RuleEngine(
+        scene,
+        fps=fps,
+        min_track_duration=tracker_cfg.min_track_duration,
+        max_track_gap=gap_tolerance,
+    )
     smoother = SignalSmoother(window=5)
     boxes_by_frame: dict[int, list[tuple[int, int, int, int]]] = {}
     tracks_by_frame: dict[int, list] = {}

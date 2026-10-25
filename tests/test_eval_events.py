@@ -1,8 +1,8 @@
-from scripts.eval_events import _EventWindow, match_events
+from tvd.rules import EventWindow, match_events
 
 
 def ev(type_, start, end):
-    return _EventWindow(type_, start, end)
+    return EventWindow(type_, start, end)
 
 
 def test_perfect_match_within_tolerance():

@@ -50,12 +50,23 @@ class _TrackState:
 class RuleEngine:
     """Stateful per-frame rule evaluation. Feed tracks frame by frame."""
 
-    def __init__(self, scene: SceneConfig, fps: float, min_track_duration: int = 5):
+    def __init__(
+        self,
+        scene: SceneConfig,
+        fps: float,
+        min_track_duration: int = 5,
+        max_track_gap: int = 1,
+    ):
         if fps <= 0:
             raise ValueError("fps must be positive")
+        if max_track_gap < 1:
+            raise ValueError("max_track_gap must be >= 1")
         self.scene = scene
         self.fps = fps
         self.min_track_duration = min_track_duration
+        # frames a track may be unobserved before its continuity state resets;
+        # >1 only makes sense with track stitching upstream
+        self.max_track_gap = max_track_gap
         self._tracks: dict[int, _TrackState] = {}
         self._signal_history: dict[int, SignalState] = {}
         self.events: list[ViolationEvent] = []
@@ -76,9 +87,10 @@ class RuleEngine:
             cx, cy = track.center
             foot = ((track.x1 + track.x2) / 2, track.y2)  # ground reference point
 
-            # occlusion gap: the tracker lost this id for >1 frame; reset the
-            # wrong-way run so evidence comes from continuous observation
-            if state.last_frame > 0 and frame_idx - state.last_frame > 1:
+            # observation gap: the tracker lost this id for longer than the
+            # tolerated gap; reset the wrong-way run so evidence comes from
+            # (near-)continuous observation
+            if state.last_frame > 0 and frame_idx - state.last_frame > self.max_track_gap:
                 state.wrong_way_run = 0
 
             if state.history:

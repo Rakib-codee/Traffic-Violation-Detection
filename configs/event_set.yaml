@@ -1,0 +1,31 @@
+# Event-level eval set: labeled clips with expected violation events.
+# Clip videos live in data/ (gitignored); only this manifest is committed.
+#
+# Labeling method (honest scope):
+# - detrac-normal: real UA-DETRAC sample with normal traffic; negative case.
+# - detrac-reversed-wrong-way: the same clip played backwards (built by
+#   scripts/build_event_set.py), so every sustained moving vehicle is
+#   wrong-way BY CONSTRUCTION. The 7 expected events were verified by visual
+#   review of the annotated track video: 7 distinct vehicles (lateral position
+#   and frame span checked per track) each opposing lane direction for >=10
+#   consecutive frames. Frame spans are the rule's flag windows from the
+#   reviewed run; match_tolerance_frames absorbs run-to-run drift.
+#   Completeness caveat: tracker fragmentation could hide additional sustained
+#   vehicles, so treat recall on this set as a lower bound.
+match_tolerance_frames: 15
+clips:
+  - name: detrac-normal
+    video: data/samples/detrac_mvi20012.mp4
+    scene: configs/scene.detrac-mvi20012.yaml
+    expected_events: []
+  - name: detrac-reversed-wrong-way
+    video: data/events/detrac_mvi20012_reversed.mp4
+    scene: configs/scene.detrac-mvi20012.yaml
+    expected_events:
+      - {type: wrong_way, start_frame: 20, end_frame: 29, note: "van, near-lane-left"}
+      - {type: wrong_way, start_frame: 30, end_frame: 39, note: "car, far-lane-away"}
+      - {type: wrong_way, start_frame: 33, end_frame: 42, note: "car, near-lane-right"}
+      - {type: wrong_way, start_frame: 37, end_frame: 46, note: "car, near-lane-right"}
+      - {type: wrong_way, start_frame: 57, end_frame: 66, note: "van, near-lane-left"}
+      - {type: wrong_way, start_frame: 57, end_frame: 66, note: "car, near-lane-right"}
+      - {type: wrong_way, start_frame: 58, end_frame: 67, note: "car, far-lane-away"}

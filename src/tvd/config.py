@@ -129,6 +129,36 @@ class SignalRoi(BaseModel):
     height: float = Field(gt=0)
 
 
+class ExpectedEvent(BaseModel):
+    """One hand-labeled ground-truth violation event in an eval clip."""
+
+    type: Literal["red_light", "wrong_way", "helmet"]
+    start_frame: int = Field(ge=1, description="1-based first frame of the event.")
+    end_frame: int = Field(ge=1, description="1-based last frame of the event.")
+    note: str = ""
+
+
+class EventClip(BaseModel):
+    """One labeled clip in the event-level eval set."""
+
+    name: str
+    video: Path
+    scene: Path = Field(description="Scene config for this clip's camera view.")
+    weights: Path = Path("weights/detector.pt")
+    expected_events: list[ExpectedEvent] = Field(default_factory=list)
+
+
+class EventSetConfig(BaseModel):
+    """Event-level eval set manifest (configs/event_set.yaml)."""
+
+    match_tolerance_frames: int = Field(
+        default=15,
+        ge=0,
+        description="Predicted event windows may be off by this many frames.",
+    )
+    clips: list[EventClip] = Field(min_length=1)
+
+
 class SceneConfig(BaseModel):
     """Per-camera scene calibration (configs/scene.<camera>.yaml)."""
 
@@ -187,3 +217,7 @@ def load_scene_config(path: Path | str) -> SceneConfig:
 
 def load_extensions_config(path: Path | str) -> ExtensionsConfig:
     return ExtensionsConfig(**load_yaml(path))
+
+
+def load_event_set_config(path: Path | str) -> EventSetConfig:
+    return EventSetConfig(**load_yaml(path))

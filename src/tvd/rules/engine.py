@@ -96,6 +96,27 @@ class RuleEngine:
         self.events.extend(new_events)
         return new_events
 
+    def _side_of_stop_line(self, x: float, y: float) -> int:
+        """Which side of the stop line a point is on (+1/-1; 0 = on the line)."""
+        a, b = self.scene.stop_line
+        o = (b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x)
+        return 0 if o == 0 else (1 if o > 0 else -1)
+
+    def _is_recross(self, state: _TrackState, foot: tuple[float, float], frame_idx: int) -> bool:
+        """True if this track was already on the target side of the stop line
+        within the recross window — a bbox-truncation/occlusion artifact, not
+        a physical crossing."""
+        curr_side = self._side_of_stop_line(foot[0], foot[1])
+        if curr_side == 0:
+            return False
+        window = self.scene.red_light_recross_s * self.fps
+        for h_frame, hx, hy in state.history:
+            if frame_idx - h_frame > window:
+                continue
+            if self._side_of_stop_line(hx, hy) == curr_side:
+                return True
+        return False
+
     def _check_red_light(
         self, track: Track, state: _TrackState, foot: tuple[float, float], frame_idx: int
     ) -> ViolationEvent | None:
@@ -105,6 +126,8 @@ class RuleEngine:
         prev = Point(x=prev_x, y=prev_y)
         curr = Point(x=foot[0], y=foot[1])
         if not crosses_stop_line(prev, curr, self.scene):
+            return None
+        if self._is_recross(state, foot, frame_idx):
             return None
 
         # cameras without a visible signal cannot run red-light detection

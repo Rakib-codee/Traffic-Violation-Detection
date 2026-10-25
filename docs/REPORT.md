@@ -35,17 +35,21 @@ F1 1.000, 0.0 false alerts/hour. The scenario suite is synthetic by
 construction and acts as unit tests.
 
 Real-video event set (3 clips, 20.1 s of UA-DETRAC footage; manifest
-`configs/event_set.yaml`): precision 0.800, recall 1.000, F1 0.889.
-Breakdown: negative clip (normal traffic) 0 false alerts; constructed
-wrong-way clip (reversed playback) 7/7 verified events; constructed red-light
-clip (synthetic signal overlay) 1/1 genuine event plus **2 false positives**
-— both tracker artifacts, not rule-logic errors: the occluded van's bounding
-box re-crosses the stop line when the occlusion clears (~frame 37), and the
-violating car is flagged twice across a tracker ID switch (~frame 40). The
-headline false-alerts/hour (358) is extrapolated from a 6.7 s clip and is not
-a meaningful rate; per-clip FP counts are the honest figure. Red-light recall
-rests on one constructed event; wrong-way recall is a lower bound (tracker
-fragmentation). This is a smoke test, not field performance.
+`configs/event_set.yaml`): precision 1.000, recall 1.000, F1 1.000,
+0.0 false alerts/hour. Breakdown: negative clip (normal traffic) 0 false
+alerts; constructed wrong-way clip (reversed playback) 7/7 verified events;
+constructed red-light clip (synthetic signal overlay) 2/2 genuine events.
+
+This set caught two real engineering lessons, documented in
+`configs/event_set.yaml`: (1) an occlusion-driven bounding-box re-cross
+produced a spurious red-light event — fixed with a per-track recross window
+(`red_light_recross_s`, default 5 s) that suppresses crossings onto a side
+the track already occupied recently; before the fix the set scored
+precision 0.800 / F1 0.889. (2) What first looked like a tracker ID-switch
+duplicate turned out, on frame-by-frame video review, to be a genuine second
+violator following the first — ground truth was corrected, not the metric.
+Red-light recall rests on two constructed events; wrong-way recall is a lower
+bound (tracker fragmentation). This is a smoke test, not field performance.
 
 Tracking: ByteTrack is integrated and produces stable IDs on the sample clips
 used during development; the UA-DETRAC benchmark eval (HOTA/IDF1/ID switches)
@@ -61,12 +65,10 @@ an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done
 - Red-light rule depends on per-camera scene calibration and a visible signal
   ROI; views without one have the rule disabled by config.
 - Signal state is a color/ROI heuristic, not a learned classifier.
-- Event-level metrics on real video rest on 3 short clips (20.1 s) with one
-  genuine violation per constructed case — a smoke test, not field
-  performance.
-- Occlusion and tracker ID switches produce duplicate/spurious red-light
-  events near the stop line (2 FP in the red-light clip); a cooldown or
-  track-stitching step would be the natural follow-up.
+- Event-level metrics on real video rest on 3 short clips (20.1 s) with a
+  handful of constructed violations — a smoke test, not field performance.
+- Remaining occlusion risk: long gaps still fragment tracks (wrong-way recall
+  is a lower bound); track stitching is the natural follow-up.
 - Plate blurring uses a heuristic plate band; the ANPR module does not feed
   the blur step.
 - Helmet/plate detectors are trained on third-party datasets (licenses in

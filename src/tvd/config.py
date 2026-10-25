@@ -173,6 +173,13 @@ class SceneConfig(BaseModel):
     red_light_tolerance_s: float = Field(
         default=0.3, ge=0.0, description="Grace window after signal turns red."
     )
+    red_light_recross_s: float = Field(
+        default=5.0,
+        ge=0.0,
+        description="Suppress a red-light crossing if this track was already on the"
+        " target side of the stop line within this window (occlusion/bbox"
+        " re-cross artifact, not a physical crossing).",
+    )
     wrong_way_min_frames: int = Field(
         default=10, gt=0, description="Frames of opposing motion before flagging."
     )

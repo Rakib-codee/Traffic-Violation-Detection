@@ -118,11 +118,16 @@ Red-light (stop-line crossing while signal red, with tolerance window) and
 wrong-way (sustained opposing motion) rules run on synthetic trajectories:
 
 ```bash
-python scripts/eval_rules.py   # event-level P/R/F1 + false alerts/hour
+python scripts/eval_rules.py   # synthetic scenarios: event-level P/R/F1 + false alerts/hour
+
+# real-video event set (manifest configs/event_set.yaml; build derived clips first):
+python scripts/build_event_set.py
+python scripts/eval_events.py
 ```
 
-The scenario suite is synthetic; the hand-labeled real-video event set is
-not run yet (see docs/DATA.md). All outputs are candidates for human review.
+The real-video set currently covers a negative clip (normal traffic) and a
+constructed wrong-way clip (reversed playback); red-light has no real-video
+coverage yet (see docs/DATA.md). All outputs are candidates for human review.
 
 ## Evidence + dashboard (Phase 5)
 

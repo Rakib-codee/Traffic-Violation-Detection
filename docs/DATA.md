@@ -16,5 +16,11 @@ Record every dataset used below before downloading it.
 
 Own footage: only from public/permitted sources; document permission here before use.
 
-The event-level evaluation set (small, hand-labeled) will live in
-`data/eval_events/` with a manifest CSV; it is built in a later phase.
+| detrac_mvi20012 sample clip (from data/vehicles export) | sample/demo + event-level eval set | CC BY 4.0 (same export as above) | data/samples/ | in use |
+
+The event-level evaluation set (small, hand-labeled) lives in `data/events/`
+(gitignored) with the committed manifest `configs/event_set.yaml`. Derived
+clips are constructed from the UA-DETRAC sample by `scripts/build_event_set.py`
+(e.g. reversed playback => wrong-way ground truth by construction); labeling
+method and caveats are documented in the manifest. Run it with
+`python scripts/eval_events.py`.

@@ -32,8 +32,14 @@ mAP@0.5): night 0.9466, rain 0.9698, glare 0.9694 vs clean 0.9702.
 
 Rule engine (7 synthetic-trajectory scenarios): precision 1.000, recall 1.000,
 F1 1.000, 0.0 false alerts/hour. The scenario suite is synthetic by
-construction; the hand-labeled real-video event set is **not run** (too small
-to label yet).
+construction and acts as unit tests.
+
+Real-video event set (2 clips, 13.4 s of UA-DETRAC footage; manifest
+`configs/event_set.yaml`): precision 1.000, recall 1.000, F1 1.000,
+0.0 false alerts/hour. Coverage is still thin: one negative clip (normal
+traffic) and one constructed wrong-way clip (reversed playback, 7 verified
+events). Red-light on real video is **not covered** — no signal footage yet;
+recall on the reversed clip is a lower bound (tracker fragmentation).
 
 Tracking: ByteTrack is integrated and produces stable IDs on the sample clips
 used during development; the UA-DETRAC benchmark eval (HOTA/IDF1/ID switches)
@@ -49,8 +55,9 @@ an Apple-silicon laptop (MPS). No Jetson/ONNX/TensorRT edge test was done
 - Red-light rule depends on per-camera scene calibration and a visible signal
   ROI; views without one have the rule disabled by config.
 - Signal state is a color/ROI heuristic, not a learned classifier.
-- Event-level metrics on real video are unmeasured; treat the synthetic
-  scenario results as unit tests, not field performance.
+- Event-level metrics on real video cover wrong-way and a negative case only;
+  red-light has no real-video coverage yet (no signal footage), and the set is
+  small (2 clips, 13.4 s) — treat it as a smoke test, not field performance.
 - Plate blurring uses a heuristic plate band; the ANPR module does not feed
   the blur step.
 - Helmet/plate detectors are trained on third-party datasets (licenses in

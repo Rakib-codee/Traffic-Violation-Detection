@@ -93,6 +93,27 @@ def stationary(y: float = 200.0, frames: int = 60, x: float = 100.0):
     return [(f, x, y + 0.05 * f) for f in range(1, frames + 1)]
 
 
+def occlusion_recross(x: float = 100.0):
+    """Cross on green, hover past the line, bbox-truncate back across it during
+    'occlusion', then re-expand past the line on red. The re-cross is an
+    artifact and must be suppressed by the recross window."""
+    points = [(f, x, 60.0 + 6.0 * f) for f in range(1, 16)]  # crosses y=100 at f7 (green)
+    points += [(f, x, 125.0) for f in range(16, 21)]  # genuinely past the line
+    points += [(f, x, 95.0) for f in range(21, 55)]  # truncated during occlusion
+    points += [(55, x, 140.0)]  # occlusion clears: re-cross on red (artifact)
+    return points
+
+
+def recross_after_window(x: float = 100.0):
+    """Cross on green, retreat far past the window, then cross again on red
+    after the recross window has expired — a genuine second crossing."""
+    points = [(f, x, 60.0 + 6.0 * f) for f in range(1, 16)]  # crosses at f7 (green)
+    points += [(f, x, 125.0) for f in range(16, 21)]
+    points += [(f, x, 95.0) for f in range(21, 80)]  # back before the line
+    points += [(f, x, 95.0 + 10.0 * (f - 79)) for f in range(80, 82)]  # re-cross at f81
+    return points
+
+
 SCENARIOS: list[Scenario] = [
     Scenario(
         name="red_light_runner",
@@ -145,5 +166,19 @@ SCENARIOS: list[Scenario] = [
         trajectories=[(1, stationary())],
         signal_from_frame=1,
         expected=[],
+    ),
+    Scenario(
+        name="occlusion_recross_on_red",
+        frames=60,
+        trajectories=[(1, occlusion_recross())],
+        signal_from_frame=50,  # green until frame 49, red from 50
+        expected=[],  # re-cross at f55 is a bbox artifact; suppressed
+    ),
+    Scenario(
+        name="recross_after_window_fires",
+        frames=90,
+        trajectories=[(1, recross_after_window())],
+        signal_from_frame=50,
+        expected=[(1, ViolationType.RED_LIGHT)],  # genuine re-cross at f81 (>window)
     ),
 ]
